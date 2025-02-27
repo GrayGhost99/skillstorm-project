@@ -6,6 +6,14 @@ variable "sub" {
   type        = string
   default     = ""
 }
+variable "vmss_admin_username" {
+  type    = string
+  default = ""
+}
+variable "vmss_admin_password" {
+  type    = string
+  default = ""
+}
 
 # Resource Group vars
 variable "rg" {
