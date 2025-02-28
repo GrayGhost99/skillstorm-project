@@ -1,0 +1,11 @@
+Steps after creation of resources to test:
+
+
+Test connection to storage account:
+
+# go to blob container and create a SAS token
+# upload the hello_world.html to the container
+# log into VMSS instance
+
+# copy file back to storage with a new name
+sudo azcopy copy "https://vmssdatastorage.blob.core.windows.net/vmss-container/hello_world.html?<SAS token>" "https://vmssdatastorage.blob.core.windows.net/vmss-container/hello_world_copy.html?<SAS TOKEN>"

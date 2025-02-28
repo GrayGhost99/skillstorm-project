@@ -21,3 +21,10 @@ output "subnet_details" {
     subnet2_id            = azurerm_subnet.data_snt.id
   }
 }
+
+# Load balancer IP
+output "load_balancer_ip" {
+  value       = azurerm_public_ip.web_pub_ip.ip_address
+  description = "The public IP address of the load balancer."
+}
+
