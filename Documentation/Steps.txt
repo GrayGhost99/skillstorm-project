@@ -3,9 +3,15 @@ Steps after creation of resources to test:
 
 Test connection to storage account:
 
-# go to blob container and create a SAS token
-# upload the hello_world.html to the container
+# go to blob container and create a SAS token (read, write, list)
+# upload the hello_world.html to the container from repo documentation
 # log into VMSS instance
 
 # copy file back to storage with a new name
 sudo azcopy copy "https://vmssdatastorage.blob.core.windows.net/vmss-container/hello_world.html?<SAS token>" "https://vmssdatastorage.blob.core.windows.net/vmss-container/hello_world_copy.html?<SAS TOKEN>"
+
+
+# Test SQL connection:
+add LB Pub ip to rules (sqlserver>security>networking>add a firewall rule)
+the IP that the sql server FW sees is the Pub IP of the LB that is associated with the VMSS
+sqlcmd -S data-snt-sql-server.database.windows.net -U michael -P gfbrDFG534@grg12 -d datadb -Q "SELECT @@VERSION"
