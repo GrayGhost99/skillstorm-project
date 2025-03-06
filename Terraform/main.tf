@@ -212,90 +212,7 @@ resource "azurerm_lb_rule" "http_rule" {
   ]
 }
 
-
-# Virtual Machine Scale Set
-# VMSS configuration
-# resource "azurerm_linux_virtual_machine_scale_set" "web_ss" {
-#   name                            = "web-vmss"
-#   resource_group_name             = var.rg
-#   location                        = var.vnet_loc
-#   sku                             = "Standard_F2"
-#   instances                       = 2
-#   admin_username                  = var.vmss_admin_username
-#   admin_password                  = var.vmss_admin_password
-#   disable_password_authentication = false
-#   health_probe_id                 = azurerm_lb_probe.http_probe.id
-
-#   # OS Upgrades
-#   upgrade_mode = "Automatic"
-
-#   automatic_os_upgrade_policy {
-#     enable_automatic_os_upgrade = true
-#     disable_automatic_rollback  = false
-#   }
-
-#   source_image_reference {
-#     publisher = "Canonical"
-#     offer     = "UbuntuServer"
-#     sku       = "18.04-LTS"
-#     version   = "latest"
-#   }
-
-#   os_disk {
-#     storage_account_type = "Standard_LRS"
-#     caching              = "ReadWrite"
-#   }
-
-#   network_interface {
-#     name    = "vmss_nic"
-#     primary = true
-
-#     ip_configuration {
-#       name      = "internal"
-#       primary   = true
-#       subnet_id = azurerm_subnet.web_snt.id
-#       load_balancer_backend_address_pool_ids = [
-#         azurerm_lb_backend_address_pool.web_backend_pool.id
-#       ]
-#     }
-#   }
-
-
-#   # see bastion notes for details
-#   # Startup script to install Nginx and create static index.html with hostname
-#   custom_data = base64encode(<<-EOT
-#     #!/bin/bash
-#     sudo apt-get update -y
-#     apt-get install -y nginx
-#     sudo snap install azcli
-#     sudo apt-get install -y curl apt-transport-https
-#     curl https://packages.microsoft.com/keys/microsoft.asc | sudo apt-key add -
-#     curl https://packages.microsoft.com/config/ubuntu/18.04/prod.list | sudo tee /etc/apt/sources.list.d/mssql-release.list
-#     sudo apt-get update -y
-#     sudo ACCEPT_EULA=Y apt-get install -y mssql-tools unixodbc-dev
-#     echo 'export PATH="$PATH:/opt/mssql-tools/bin"' >> ~/.bashrc
-#     source ~/.bashrc
-
-
-#     # Get instance hostname
-#     hostname=$(hostname)
-
-#     # Use hostname to create html for each vm
-#     # Can refresh screen to show different hosts for Load Balancer function
-#     echo "<html><head><title>Welcome</title></head><body><h1>Hello, World - This is $${hostname}</h1></body></html>" > /var/www/html/index.html
-
-#     # Start nginx
-#     systemctl enable nginx
-#     systemctl start nginx
-#   EOT
-#   )
-
-#   depends_on = [
-#     azurerm_lb.web_lb
-#   ]
-# }
-
-resource "azurerm_orchestrated_virtual_machine_scale_set" "web-vmss" {
+resource "azurerm_orchestrated_virtual_machine_scale_set" "web_vmss" {
   name                = "web-vmss"
   location            = var.vnet_loc
   resource_group_name = var.rg
@@ -307,9 +224,39 @@ resource "azurerm_orchestrated_virtual_machine_scale_set" "web-vmss" {
 
   os_profile {
     linux_configuration {
-      admin_username = var.vmss_admin_username
-      admin_password = var.vmss_admin_password
+      admin_username                  = var.vmss_admin_username
+      admin_password                  = var.vmss_admin_password
+      disable_password_authentication = false
+      patch_mode                      = "AutomaticByPlatform"
+      provision_vm_agent              = true
     }
+
+    custom_data = base64encode(<<-EOT
+      #!/bin/bash
+      sudo apt-get update -y
+      apt-get install -y nginx
+      sudo snap install azcli
+      sudo apt-get install -y curl apt-transport-https
+      curl https://packages.microsoft.com/keys/microsoft.asc | sudo apt-key add -
+      curl https://packages.microsoft.com/config/ubuntu/18.04/prod.list | sudo tee /etc/apt/sources.list.d/mssql-release.list
+      sudo apt-get update -y
+      sudo ACCEPT_EULA=Y apt-get install -y mssql-tools unixodbc-dev
+      echo 'export PATH="$PATH:/opt/mssql-tools/bin"' >> ~/.bashrc
+      source ~/.bashrc
+
+
+      # Get instance hostname
+      hostname=$(hostname)
+
+      # Use hostname to create html for each vm
+      # Can refresh screen to show different hosts for Load Balancer function
+      echo "<html><head><title>Welcome</title></head><body><h1>Hello, World - This is $${hostname}</h1></body></html>" > /var/www/html/index.html
+
+      # Start nginx
+      systemctl enable nginx
+      systemctl start nginx
+    EOT
+    )
   }
 
   network_interface {
@@ -342,13 +289,13 @@ resource "azurerm_orchestrated_virtual_machine_scale_set" "web-vmss" {
     name                               = "HealthExtension"
     publisher                          = "Microsoft.ManagedServices"
     type                               = "ApplicationHealthLinux"
-    type_handler_version               = "1.0"
+    type_handler_version               = "2.0"
     auto_upgrade_minor_version_enabled = true
 
     settings = jsonencode({
       "protocol"    = "http"
       "port"        = 80
-      "requestPath" = "/healthEndpoint"
+      "requestPath" = "/"
     })
   }
 }
@@ -358,7 +305,7 @@ resource "azurerm_monitor_autoscale_setting" "vmss_autoscaling" {
   name                = "AutoscaleSetting"
   resource_group_name = var.rg
   location            = var.vnet_loc
-  target_resource_id  = azurerm_orchestrated_virtual_machine_scale_set.web_ss.id
+  target_resource_id  = azurerm_orchestrated_virtual_machine_scale_set.web_vmss.id
 
   profile {
     name = "CPU_Load_Profile"
@@ -372,7 +319,7 @@ resource "azurerm_monitor_autoscale_setting" "vmss_autoscaling" {
     rule {
       metric_trigger {
         metric_name        = "Percentage CPU"
-        metric_resource_id = azurerm_orchestrated_virtual_machine_scale_set.web_ss.id
+        metric_resource_id = azurerm_orchestrated_virtual_machine_scale_set.web_vmss.id
         time_grain         = "PT1M"
         statistic          = "Average"
         time_window        = "PT5M"
@@ -393,7 +340,7 @@ resource "azurerm_monitor_autoscale_setting" "vmss_autoscaling" {
     rule {
       metric_trigger {
         metric_name        = "Percentage CPU"
-        metric_resource_id = azurerm_orchestrated_virtual_machine_scale_set.web_ss.id
+        metric_resource_id = azurerm_orchestrated_virtual_machine_scale_set.web_vmss.id
         time_grain         = "PT1M"
         statistic          = "Average"
         time_window        = "PT5M"
