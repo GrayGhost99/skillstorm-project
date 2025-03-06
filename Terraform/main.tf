@@ -215,24 +215,25 @@ resource "azurerm_lb_rule" "http_rule" {
 
 # Virtual Machine Scale Set
 # VMSS configuration
-resource "azurerm_linux_virtual_machine_scale_set" "web_ss" {
-  name                            = "web-vmss"
-  resource_group_name             = var.rg
-  location                        = var.vnet_loc
-  sku                             = "Standard_F2"
-  instances                       = 2
-  admin_username                  = var.vmss_admin_username
-  admin_password                  = var.vmss_admin_password
-  disable_password_authentication = false
-  health_probe_id                 = azurerm_lb_probe.http_probe.id
+resource "azurerm_orchestrated_virtual_machine_scale_set" "web_ss" {
+  name                = "web-vmss"
+  resource_group_name = var.rg
+  location            = var.vnet_loc
+  sku_name            = "Standard_F2"
+  instances           = 2
+  #admin_username                  = var.vmss_admin_username
+  #admin_password                  = var.vmss_admin_password
+  #disable_password_authentication = false
+  #health_probe_id                 = azurerm_lb_probe.http_probe.id
+  platform_fault_domain_count = 2
 
   # OS Upgrades
-  upgrade_mode = "Automatic"
+  #upgrade_mode = "Automatic"
 
-  automatic_os_upgrade_policy {
-    enable_automatic_os_upgrade = true
-    disable_automatic_rollback  = false
-  }
+  # automatic_os_upgrade_policy {
+  #   enable_automatic_os_upgrade = true
+  #   disable_automatic_rollback  = false
+  # }
 
   source_image_reference {
     publisher = "Canonical"
