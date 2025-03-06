@@ -261,7 +261,6 @@ resource "azurerm_linux_virtual_machine_scale_set" "web_ss" {
   }
 
 
-  # see bastion notes for details
   # Startup script to install Nginx and create static index.html with hostname
   custom_data = base64encode(<<-EOT
     #!/bin/bash
