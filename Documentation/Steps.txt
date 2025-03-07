@@ -1,17 +1,21 @@
 Steps after creation of resources to test:
 
-
 Test connection to storage account:
+1. Go to storage account > networking > add your IP to transfer a file
+2. Go to blob container and create a SAS token (read, write, list)
+3. Upload the hello_world.html to the container from repo documentation
+4. Log into VMSS instance
+5. Copy file back to storage with a new name (replace <SAS token> with the previously created token:
 
-# go to blob container and create a SAS token (read, write, list)
-# upload the hello_world.html to the container from repo documentation
-# log into VMSS instance
-
-# copy file back to storage with a new name
 sudo azcopy copy "https://vmssdatastorage.blob.core.windows.net/vmss-container/hello_world.html?<SAS token>" "https://vmssdatastorage.blob.core.windows.net/vmss-container/hello_world_copy.html?<SAS TOKEN>"
 
 
-# Test SQL connection:
-add LB Pub ip to rules (sqlserver>security>networking>add a firewall rule)
-the IP that the sql server FW sees is the Pub IP of the LB that is associated with the VMSS
-sqlcmd -S data-snt-sql-server.database.windows.net -U michael -P gfbrDFG534@grg12 -d datadb -Q "SELECT @@VERSION"
+Test SQL connection:
+1. Log into VM
+2. Run the following commands:
+
+echo 'export PATH="$PATH:/opt/mssql-tools/bin"' >> ~/.bashrc
+source ~/.bashrc
+
+sqlcmd -S data-snt-sql-server.database.windows.net -U michael -P <PASSWORD> -d datadb -Q "SELECT @@VERSION"
+

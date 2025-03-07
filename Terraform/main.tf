@@ -222,6 +222,11 @@ resource "azurerm_orchestrated_virtual_machine_scale_set" "web_vmss" {
 
   platform_fault_domain_count = 2
 
+  automatic_instance_repair {
+    enabled      = true
+    grace_period = "PT10M"
+  }
+
   os_profile {
     linux_configuration {
       admin_username                  = var.vmss_admin_username
@@ -293,9 +298,9 @@ resource "azurerm_orchestrated_virtual_machine_scale_set" "web_vmss" {
     auto_upgrade_minor_version_enabled = true
 
     settings = jsonencode({
-      "protocol"    = "http"
-      "port"        = 80
-      "requestPath" = "/"
+      "protocol" = "tcp"
+      "port"     = 80
+      #"requestPath" = "/"
     })
   }
 }
@@ -419,4 +424,19 @@ resource "azurerm_mssql_firewall_rule" "allow_web_tier" {
   server_id        = azurerm_mssql_server.sql_server.id
   start_ip_address = cidrhost(azurerm_subnet.web_snt.address_prefixes[0], 1)
   end_ip_address   = cidrhost(azurerm_subnet.web_snt.address_prefixes[0], 254)
+}
+resource "azurerm_mssql_firewall_rule" "allow_lb" {
+  name             = "AllowLbIp"
+  server_id        = azurerm_mssql_server.sql_server.id
+  start_ip_address = azurerm_public_ip.web_pub_ip.ip_address
+  end_ip_address   = azurerm_public_ip.web_pub_ip.ip_address
+}
+
+# Log Analytics Workspace
+resource "azurerm_log_analytics_workspace" "log_analytics_ws" {
+  name                = "law-01"
+  location            = var.vnet_loc
+  resource_group_name = var.rg
+  sku                 = "PerGB2018"
+  retention_in_days   = 30
 }
